@@ -17,8 +17,15 @@ class PniioConan(ConanFile):
     1.X.X branch.
     """
 
-    boost_package = "Boost/1.62@lasote/stable"
-    pnicore_package = "pnicore/1.0.0@wintersb/devel"
+    boost_package = "Boost/1.62.0@lasote/stable"
+    pnicore_package = "pnicore/1.1.0@wintersb/devel"
+    hdf5_package = "hdf5/1.10.1@wintersb/stable"
+
+    def configure(self):
+
+        self.requires(self.boost_package)
+        self.requires(self.pnicore_package)
+        self.requires(self.hdf5_package)
 
     def source(self):
         self.run("git clone https://github.com/pni-libraries/libpniio.git")
@@ -29,12 +36,15 @@ class PniioConan(ConanFile):
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()''')
 
+
     def build(self):
         cmake = CMake(self)
 
         cmake_defs = {}
+        cmake_defs["PNIIO_CONAN_HDF5"]="ON"
+        cmake_defs["CMAKE_INSTALL_PREFIX"]=self.package_folder
 
-        cmake.configure(source_dir="libpniio"
+        cmake.configure(source_dir="libpniio",
                         defs=cmake_defs)
 
         cmake.build()
