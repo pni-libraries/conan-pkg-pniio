@@ -43,6 +43,7 @@ conan_basic_setup()''')
         cmake_defs = {}
         cmake_defs["PNIIO_CONAN_HDF5"]="ON"
         cmake_defs["CMAKE_INSTALL_PREFIX"]=self.package_folder
+        cmake_defs["CMAKE_BUILD_TYPE"]=self.settings.build_type
 
         cmake.configure(source_dir="libpniio",
                         defs=cmake_defs)
