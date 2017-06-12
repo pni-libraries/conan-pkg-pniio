@@ -50,11 +50,10 @@ conan_basic_setup()''')
 
         cmake.build()
 
-        if self.scope.run_tests:
-            if self.settings.os == "Windows":
-                cmake.build(target="RUN_TESTS")
-            else:
-                cmake.build(target="test")
+        if self.settings.os == "Windows":
+            cmake.build(target="RUN_TESTS")
+        else:
+            cmake.build(target="test")
 
         cmake.build(target="install")
 
@@ -69,5 +68,5 @@ conan_basic_setup()''')
         self.cpp_info.libs = ["hello"]
 
     def imports(self):
-        if self.settings.os=="Windws":
+        if self.settings.os=="Windows":
             self.copy("*.dll","bin","bin")
