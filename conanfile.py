@@ -8,8 +8,12 @@ class PniioConan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = "shared=False"
+    options = {"shared": [True, False],
+               "with_system_hdf5":[True,False],
+               "with_system_boost":[True,False],
+               "with_system_pnicore":[True,False]}
+    default_options = "shared=False","with_system_boost=True","with_system_hdf5=True","with_system_pnicore=True"
+
     generators = "cmake"
 
     description = """
@@ -23,12 +27,22 @@ class PniioConan(ConanFile):
 
     def configure(self):
 
-        self.requires(self.boost_package)
-        self.requires(self.pnicore_package)
-        self.requires(self.hdf5_package)
+        if not self.options.with_system_hdf5:
+            self.requires(self.hdf5_package)
+
+        if not self.options.with_system_boost:
+            self.requires(self.boost_package)
+
+        if not self.options.with_system_pnicore:
+            self.requires(self.pnicore_package)
+
+            if self.options.with_system_boost:
+                self.options["pnicore"].with_system_boost=True
+
 
     def source(self):
         self.run("git clone https://github.com/pni-libraries/libpniio.git")
+        self.run("cd libpniio && git submodule init && git submodule update --remote")
         # This small hack might be useful to guarantee proper /MT /MD linkage in MSVC
         # if the packaged project doesn't have variables to set it properly
         tools.replace_in_file("libpniio/CMakeLists.txt", "include(CTest)",
@@ -41,7 +55,6 @@ conan_basic_setup()''')
         cmake = CMake(self)
 
         cmake_defs = {}
-        cmake_defs["PNIIO_CONAN_HDF5"]="ON"
         cmake_defs["CMAKE_INSTALL_PREFIX"]=self.package_folder
         cmake_defs["CMAKE_BUILD_TYPE"]=self.settings.build_type
 
