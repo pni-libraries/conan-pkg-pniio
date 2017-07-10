@@ -22,8 +22,8 @@ class PniioConan(ConanFile):
     """
 
     boost_package = "Boost/1.62.0@lasote/stable"
-    pnicore_package = "pnicore/1.1.0@wintersb/devel"
-    hdf5_package = "hdf5/1.10.1@wintersb/stable"
+    pnicore_package = "pnicore/1.1.0@eugenwintersberger/testing"
+    hdf5_package = "hdf5/1.10.1@eugenwintersberger/testing"
 
     def configure(self):
 
