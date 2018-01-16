@@ -1,0 +1,22 @@
+language: cpp
+sudo: required
+dist: trusty
+
+
+services:
+    - docker
+    
+before_script:
+    - docker run --name build -e CONAN_LOGIN_USERNAME -e CONAN_PASSWORD -i -d -v"$PWD:/src" eugenwintersberger/debian_9:latest
+    - docker exec -it build ls
+    - docker exec -it build bash -c "pip install conan --upgrade"
+    - docker exec -it build bash -c "conan user"
+    
+script:
+    - docker exec -it build bash -c "conan create -bmissing . eugenwintersberger/devel"
+    - docker exec -it build bash -c "conan export . eugenwintersberger/devel"
+    - docker exec -it build bash -c "cd .. && conan upload -rdesypackages pniio/master@eugenwintersberger/devel"
+    
+after_script:
+    - docker container stop build
+    

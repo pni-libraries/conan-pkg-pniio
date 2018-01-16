@@ -3,7 +3,7 @@ import os
 import git
 
 class PniioConan(ConanFile):
-        """
+    """
     Building the pnicore library from a the current repository. 
     """
     #
@@ -44,87 +44,51 @@ class PniioConan(ConanFile):
     bzip2_package   = "bzip2/1.0.6@conan/stable"
     
     pniio_git_url = "https://github.com/pni-libraries/libpniio.git"
-
     
-    def _get_local_current_commit(self,repository_path):
-        self.output.info("Trying to access repository in: "+repository_path)
-        commit = None
-        try:
-            self.run("cd %s && git pull" %repository_path) 
-            repo = git.Repo(repository_path)
-            commit = repo.commit().hexsha
-            self.output.info("Current commit is: "+commit)
-            
-        except:
-            self.output.info("Could not retrieve current commit of sources")
-            
-        return commit
-    
-    def _get_remote_current_commit(self):
+    def _current_remote_commit(self):
         self.output.info("Trying to get latest commit from remote repository")
         gcmd = git.cmd.Git()
         commit = None
         
         try:
-            commit = gcmd.ls_remote(self.pnicore_git_url,"refs/heads/master").split("\t")[0]
+            commit = gcmd.ls_remote(self.pniio_git_url,"refs/heads/master").split("\t")[0]
             self.output.info("The current remote master is on: %s" %commit)
         except:
             self.output.info("Failure to determine the current commit from remote")
             
         return commit
-    
-    def _get_current_commit(self):
-        #we pull here the repository and add the commit to the build options. 
-        #if the commit has changed the hash of the build configuration will change
-        #and thus force a rebuild of the package
-        
-        
-        current_commit = None
-        self.output.info("Checking the GIT commit")       
-        source_path =  os.path.join(self.conanfile_directory,"..","source","libpniio")
-        
-        if os.path.exists(source_path):
-            current_commit = self._get_local_current_commit(source_path)
-        else:
-            current_commit = self._get_remote_current_commit()
-            
-        return current_commit
-    
-    def _set_commit_option(self):
-        current_commit = self._get_current_commit()
-        if current_commit != None:
-            #if we can obtain the actual commit of the repository we can do something with it
-            self.options.commit = current_commit
 
     def configure(self):
-
-        if not self.options.with_system_hdf5:
-            self.requires(self.hdf5_package)
-
-        if not self.options.with_system_boost:
-            self.requires(self.boost_package)
-
-        if not self.options.with_system_pnicore:
-            self.requires(self.pnicore_package)
-
-            if self.options.with_system_boost:
-                self.options["pnicore"].with_system_boost=True
+        self.requires(self.hdf5_package)
+        self.requires(self.boost_package)
+        self.requires(self.pnicore_package)
+        self.requires(self.h5cpp_package)
+        self.requires(self.zlib_package)
+        self.requires(self.bzip2_package)
+        
+        self.options["Boost"].shared = True
+        self.options["hdf5"].shared=True
+        self.options["zlib"].shared=True
                 
-        if self.auto_update: self._set_commit_option()
+        if self.auto_update: 
+            self.options.commit = self._current_remote_commit()
 
 
     def source(self):
         self.run("git clone https://github.com/pni-libraries/libpniio.git")
         self.run("cd libpniio && git submodule init && git submodule update --remote")
-        # This small hack might be useful to guarantee proper /MT /MD linkage in MSVC
-        # if the packaged project doesn't have variables to set it properly
-        tools.replace_in_file("libpniio/CMakeLists.txt", "include(CTest)",
-'''include(CTest)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()''')
-
 
     def build(self):
+        self.run("cd libpniio && git pull")
+        
+        self.output.info("patching CMakeLists.txt ...")
+        tools.replace_in_file("libpniio/CMakeLists.txt", "include(CTest)",
+'''
+include(CTest)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+'''
+        )
         cmake = CMake(self)
 
         cmake_defs = {}
@@ -137,9 +101,9 @@ conan_basic_setup()''')
         cmake.build()
 
         if self.settings.os == "Windows":
-            cmake.build(target="RUN_TESTS")
+            cmake.build(target="check")
         else:
-            cmake.build(target="test")
+            cmake.build(target="check")
 
         cmake.build(target="install")
 
